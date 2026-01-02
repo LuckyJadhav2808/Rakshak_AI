@@ -1,0 +1,3408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RakshakAI - Fraud Detection Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+    <style>
+        :root {
+            --primary: #1a237e;
+            --primary-light: #534bae;
+            --primary-dark: #000051;
+            --secondary: #00695c;
+            --secondary-light: #439889;
+            --secondary-dark: #003d33;
+            --danger: #c62828;
+            --warning: #f9a825;
+            --success: #2e7d32;
+            --info: #0277bd;
+            --light: #f5f7fa;
+            --dark: #263238;
+            --gray: #78909c;
+            --gray-light: #eceff1;
+            --border-radius: 8px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        body.dark-mode {
+            background-color: #121212;
+            color: #e0e0e0;
+            --light: #1e1e1e;
+            --gray-light: #2d2d2d;
+            --dark: #f5f5f5;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            grid-template-rows: auto 1fr;
+            min-height: 100vh;
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+
+        /* Header Styles */
+        header {
+            grid-column: 1 / -1;
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .logo i {
+            font-size: 1.8rem;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #4caf50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .timestamp {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            background-color: white;
+            padding: 1.5rem 0;
+            border-right: 1px solid var(--gray-light);
+            overflow-y: auto;
+            height: calc(100vh - 70px);
+            position: sticky;
+            top: 70px;
+        }
+
+        body.dark-mode .sidebar {
+            background-color: var(--light);
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            padding: 0.9rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background-color: var(--gray-light);
+        }
+
+        .nav-item.active {
+            background-color: rgba(26, 35, 126, 0.1);
+            border-left-color: var(--primary);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        body.dark-mode .nav-item.active {
+            background-color: rgba(26, 35, 126, 0.3);
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            padding: 1.5rem;
+            overflow-y: auto;
+            height: calc(100vh - 70px);
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        body.dark-mode .page-title {
+            color: var(--primary-light);
+        }
+
+        /* Dashboard Cards */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        body.dark-mode .card {
+            background-color: var(--light);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            color: var(--gray);
+            font-weight: 600;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .card-1 .card-icon { background-color: rgba(41, 98, 255, 0.1); color: #2962ff; }
+        .card-2 .card-icon { background-color: rgba(244, 67, 54, 0.1); color: #f44336; }
+        .card-3 .card-icon { background-color: rgba(255, 152, 0, 0.1); color: #ff9800; }
+        .card-4 .card-icon { background-color: rgba(76, 175, 80, 0.1); color: #4caf50; }
+
+        .card-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-trend {
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .trend-up { color: var(--success); }
+        .trend-down { color: var(--danger); }
+
+        /* Transactions Table */
+        .table-container {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        body.dark-mode .table-container {
+            background-color: var(--light);
+        }
+
+        .table-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gray-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .table-controls {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .table-controls button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            background-color: var(--gray-light);
+            color: var(--dark);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+        }
+
+        body.dark-mode .table-controls button {
+            background-color: #333;
+            color: #e0e0e0;
+        }
+
+        .table-controls button:hover {
+            background-color: var(--gray);
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background-color: var(--gray-light);
+        }
+
+        body.dark-mode thead {
+            background-color: #333;
+        }
+
+        th {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--dark);
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        body.dark-mode tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .risk-low { background-color: rgba(76, 175, 80, 0.15); color: var(--success); }
+        .risk-medium { background-color: rgba(255, 152, 0, 0.15); color: var(--warning); }
+        .risk-high { background-color: rgba(244, 67, 54, 0.15); color: var(--danger); }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-approved { background-color: rgba(76, 175, 80, 0.15); color: var(--success); }
+        .status-flagged { background-color: rgba(255, 152, 0, 0.15); color: var(--warning); }
+        .status-blocked { background-color: rgba(244, 67, 54, 0.15); color: var(--danger); }
+
+        /* Forms */
+        .form-container {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        body.dark-mode .form-container {
+            background-color: var(--light);
+        }
+
+        .form-title {
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+        }
+
+        body.dark-mode .form-title {
+            color: var(--primary-light);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        input, select, button {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--gray);
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        body.dark-mode input, 
+        body.dark-mode select, 
+        body.dark-mode button {
+            background-color: #2d2d2d;
+            border-color: #444;
+            color: #e0e0e0;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.2);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background-color: var(--gray-light);
+            color: var(--dark);
+        }
+
+        body.dark-mode .btn-secondary {
+            background-color: #333;
+            color: #e0e0e0;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--gray);
+            color: white;
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #1b5e20;
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #b71c1c;
+        }
+
+        .btn-warning {
+            background-color: var(--warning);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background-color: #c17900;
+        }
+
+        /* Alert Panel */
+        .alert-panel {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            width: 350px;
+            max-height: 500px;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        body.dark-mode .alert-panel {
+            background-color: #1e1e1e;
+        }
+
+        .alert-header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .alert-badge {
+            background-color: var(--danger);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .alert-body {
+            overflow-y: auto;
+            max-height: 400px;
+        }
+
+        .alert-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--gray-light);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        body.dark-mode .alert-item {
+            border-bottom-color: #333;
+        }
+
+        .alert-item:hover {
+            background-color: var(--gray-light);
+        }
+
+        body.dark-mode .alert-item:hover {
+            background-color: #333;
+        }
+
+        .alert-item.unread {
+            background-color: rgba(244, 67, 54, 0.05);
+        }
+
+        body.dark-mode .alert-item.unread {
+            background-color: rgba(244, 67, 54, 0.1);
+        }
+
+        .alert-item-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .alert-time {
+            font-size: 0.85rem;
+            color: var(--gray);
+        }
+
+        .alert-message {
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        /* Charts */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        body.dark-mode .chart-container {
+            background-color: var(--light);
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        body.dark-mode .chart-title {
+            color: var(--primary-light);
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(30px);
+        }
+
+        /* Animations */
+        .new-transaction {
+            animation: highlight 2s ease;
+        }
+
+        @keyframes highlight {
+            0% { background-color: rgba(41, 98, 255, 0.3); }
+            100% { background-color: transparent; }
+        }
+
+        .shake {
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                display: none;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .cards-grid, .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-controls {
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+        }
+
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 2rem;
+            position: relative;
+            transform: translateY(-20px);
+            transition: var(--transition);
+        }
+
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+
+        body.dark-mode .modal-content {
+            background-color: var(--light);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray);
+        }
+
+        /* Utility Classes */
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .mb-3 { margin-bottom: 1.5rem; }
+        .mt-1 { margin-top: 0.5rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-3 { margin-top: 1.5rem; }
+        .p-1 { padding: 0.5rem; }
+        .p-2 { padding: 1rem; }
+        .p-3 { padding: 1.5rem; }
+        .w-100 { width: 100%; }
+        .d-flex { display: flex; }
+        .align-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-1 { gap: 0.5rem; }
+        .gap-2 { gap: 1rem; }
+        .gap-3 { gap: 1.5rem; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                <h1>RakshakAI</h1>
+            </div>
+            
+            <div class="header-controls">
+                <button class="btn btn-warning" id="load-demo-btn">
+                    <i class="fas fa-database"></i>
+                    <span>Load Demo Data</span>
+                </button>
+                
+                <div class="system-status">
+                    <div class="status-indicator"></div>
+                    <span>System Active</span>
+                </div>
+                
+                <div class="timestamp">
+                    <i class="far fa-clock"></i>
+                    <span id="current-time">Loading...</span>
+                </div>
+                
+                <div class="d-flex align-center gap-2">
+                    <span>Dark Mode</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="dark-mode-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                
+                <button class="btn btn-primary" id="simulate-btn">
+                    <i class="fas fa-bolt"></i>
+                    <span>Start Simulation</span>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <ul class="nav-menu">
+                <li class="nav-item active" data-page="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </li>
+                <li class="nav-item" data-page="transactions">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span>Transactions</span>
+                </li>
+                <li class="nav-item" data-page="detection">
+                    <i class="fas fa-robot"></i>
+                    <span>Detection Engine</span>
+                </li>
+                <li class="nav-item" data-page="analytics">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Analytics</span>
+                </li>
+                <li class="nav-item" data-page="users">
+                    <i class="fas fa-users"></i>
+                    <span>User Management</span>
+                </li>
+                <li class="nav-item" data-page="alerts">
+                    <i class="fas fa-bell"></i>
+                    <span>Alerts</span>
+                    <span class="alert-badge hidden">0</span>
+                </li>
+                <li class="nav-item" data-page="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </li>
+            </ul>
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <section id="dashboard" class="page active">
+                <h2 class="page-title">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard Overview
+                </h2>
+                
+                <div class="cards-grid">
+                    <div class="card card-1">
+                        <div class="card-header">
+                            <h3 class="card-title">Total Transactions Today</h3>
+                            <div class="card-icon">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="total-transactions">0</div>
+                        <div class="card-trend trend-up">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>12% from yesterday</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card card-2">
+                        <div class="card-header">
+                            <h3 class="card-title">High-Risk Transactions</h3>
+                            <div class="card-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="high-risk">0</div>
+                        <div class="card-trend trend-up">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>5% from yesterday</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card card-3">
+                        <div class="card-header">
+                            <h3 class="card-title">Flagged Transactions</h3>
+                            <div class="card-icon">
+                                <i class="fas fa-flag"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="flagged">0</div>
+                        <div class="card-trend trend-down">
+                            <i class="fas fa-arrow-down"></i>
+                            <span>3% from yesterday</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card card-4">
+                        <div class="card-header">
+                            <h3 class="card-title">System Accuracy</h3>
+                            <div class="card-icon">
+                                <i class="fas fa-bullseye"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="accuracy">0%</div>
+                        <div class="card-trend trend-up">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>2% from last week</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">Live Transaction Feed</h3>
+                        <div class="table-controls">
+                            <button id="auto-generate">
+                                <i class="fas fa-bolt"></i>
+                                Auto-generate
+                            </button>
+                            <button id="export-data">
+                                <i class="fas fa-download"></i>
+                                Export
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>User ID</th>
+                                <th>Amount</th>
+                                <th>Location</th>
+                                <th>Risk Score</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transaction-feed">
+                            <!-- Transactions will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="form-container">
+                    <h3 class="form-title">Process New Transaction</h3>
+                    <form id="transaction-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="user-id">User ID</label>
+                                <select id="user-id" required>
+                                    <option value="">Select a user</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="amount">Amount ($)</label>
+                                <input type="number" id="amount" min="0.01" step="0.01" placeholder="0.00" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="location">Location</label>
+                                <input type="text" id="location" placeholder="e.g., New York, NY" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="merchant-type">Merchant Type</label>
+                                <select id="merchant-type" required>
+                                    <option value="">Select merchant type</option>
+                                    <option value="Retail">Retail</option>
+                                    <option value="Online">Online</option>
+                                    <option value="Travel">Travel</option>
+                                    <option value="Electronics">Electronics</option>
+                                    <option value="Grocery">Grocery</option>
+                                    <option value="Restaurant">Restaurant</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="time">Transaction Time</label>
+                                <input type="datetime-local" id="time" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Risk Score Preview</label>
+                                <div class="d-flex align-center gap-2">
+                                    <div id="risk-preview" class="risk-badge risk-low">0</div>
+                                    <button type="button" id="preview-risk" class="btn btn-secondary">
+                                        <i class="fas fa-calculator"></i>
+                                        Calculate
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                                Process Transaction
+                            </button>
+                            <button type="button" id="clear-form" class="btn btn-secondary">
+                                <i class="fas fa-eraser"></i>
+                                Clear
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+            
+            <!-- Transactions Page -->
+            <section id="transactions" class="page">
+                <h2 class="page-title">
+                    <i class="fas fa-exchange-alt"></i>
+                    Transaction History
+                </h2>
+                
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">All Transactions</h3>
+                        <div class="table-controls">
+                            <select id="filter-status">
+                                <option value="all">All Status</option>
+                                <option value="approved">Approved</option>
+                                <option value="flagged">Flagged</option>
+                                <option value="blocked">Blocked</option>
+                            </select>
+                            <select id="filter-risk">
+                                <option value="all">All Risk</option>
+                                <option value="low">Low Risk</option>
+                                <option value="medium">Medium Risk</option>
+                                <option value="high">High Risk</option>
+                            </select>
+                            <input type="text" id="search-transactions" placeholder="Search transactions...">
+                            <button id="clear-filters" class="btn btn-secondary">
+                                <i class="fas fa-filter"></i>
+                                Clear Filters
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Time</th>
+                                <th>User ID</th>
+                                <th>Amount</th>
+                                <th>Location</th>
+                                <th>Merchant</th>
+                                <th>Risk Score</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="all-transactions">
+                            <!-- All transactions will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Detection Engine Page -->
+            <section id="detection" class="page">
+                <h2 class="page-title">
+                    <i class="fas fa-robot"></i>
+                    Fraud Detection Engine
+                </h2>
+                
+                <div class="cards-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Active Rules</h3>
+                            <div class="card-icon">
+                                <i class="fas fa-list-check"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="active-rules">12</div>
+                        <div class="card-trend trend-up">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>2 new rules this month</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Rules Triggered Today</h3>
+                            <div class="card-icon">
+                                <i class="fas fa-bolt"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="rules-triggered">0</div>
+                        <div class="card-trend trend-up">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>15% from yesterday</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">False Positives</h3>
+                            <div class="card-icon">
+                                <i class="fas fa-times-circle"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="false-positives">0</div>
+                        <div class="card-trend trend-down">
+                            <i class="fas fa-arrow-down"></i>
+                            <span>8% from last week</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Avg. Processing Time</h3>
+                            <div class="card-icon">
+                                <i class="fas fa-stopwatch"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="avg-processing">0ms</div>
+                        <div class="card-trend trend-down">
+                            <i class="fas fa-arrow-down"></i>
+                            <span>12% faster</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-container">
+                    <h3 class="form-title">Detection Rules</h3>
+                    <div id="rules-list">
+                        <!-- Rules will be populated here -->
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Analytics Page -->
+            <section id="analytics" class="page">
+                <h2 class="page-title">
+                    <i class="fas fa-chart-bar"></i>
+                    Analytics & Reports
+                </h2>
+                
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3 class="chart-title">Risk Score Distribution</h3>
+                        <canvas id="risk-distribution-chart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3 class="chart-title">Transactions Over Time</h3>
+                        <canvas id="transactions-time-chart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3 class="chart-title">Top Flagged Users</h3>
+                        <canvas id="flagged-users-chart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3 class="chart-title">Transaction Amounts by Status</h3>
+                        <canvas id="amounts-status-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="form-container">
+                    <h3 class="form-title">Report Filters</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="date-from">From Date</label>
+                            <input type="date" id="date-from">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="date-to">To Date</label>
+                            <input type="date" id="date-to">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="report-type">Report Type</label>
+                            <select id="report-type">
+                                <option value="daily">Daily Summary</option>
+                                <option value="weekly">Weekly Summary</option>
+                                <option value="monthly">Monthly Summary</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button id="generate-report" class="btn btn-primary">
+                            <i class="fas fa-chart-line"></i>
+                            Generate Report
+                        </button>
+                        <button id="export-report" class="btn btn-secondary">
+                            <i class="fas fa-file-export"></i>
+                            Export Report
+                        </button>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- User Management Page -->
+            <section id="users" class="page">
+                <h2 class="page-title">
+                    <i class="fas fa-users"></i>
+                    User Management
+                </h2>
+                
+                <div class="table-container mb-3">
+                    <div class="table-header">
+                        <h3 class="table-title">User Profiles</h3>
+                        <div class="table-controls">
+                            <button id="add-user-btn" class="btn btn-primary">
+                                <i class="fas fa-user-plus"></i>
+                                Add User
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Name</th>
+                                <th>Baseline Location</th>
+                                <th>Avg. Transaction</th>
+                                <th>Risk Level</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-list">
+                            <!-- Users will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="form-container">
+                    <h3 class="form-title">Whitelist / Blacklist Management</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="user-select">Select User</label>
+                            <select id="user-select">
+                                <option value="">Select a user</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="list-action">Action</label>
+                            <select id="list-action">
+                                <option value="whitelist">Add to Whitelist</option>
+                                <option value="blacklist">Add to Blacklist</option>
+                                <option value="remove">Remove from List</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="list-reason">Reason</label>
+                            <input type="text" id="list-reason" placeholder="Reason for action">
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button id="apply-list-action" class="btn btn-primary">
+                            <i class="fas fa-check"></i>
+                            Apply Action
+                        </button>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Alerts Page -->
+            <section id="alerts" class="page">
+                <h2 class="page-title">
+                    <i class="fas fa-bell"></i>
+                    Alert History
+                </h2>
+                
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">All Alerts</h3>
+                        <div class="table-controls">
+                            <select id="alert-filter">
+                                <option value="all">All Alerts</option>
+                                <option value="unread">Unread Only</option>
+                                <option value="high">High Priority</option>
+                                <option value="medium">Medium Priority</option>
+                                <option value="low">Low Priority</option>
+                            </select>
+                            <button id="mark-all-read" class="btn btn-secondary">
+                                <i class="fas fa-check-double"></i>
+                                Mark All Read
+                            </button>
+                            <button id="clear-alerts" class="btn btn-danger">
+                                <i class="fas fa-trash"></i>
+                                Clear All
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="alerts-container">
+                        <!-- Alerts will be populated here -->
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Settings Page -->
+            <section id="settings" class="page">
+                <h2 class="page-title">
+                    <i class="fas fa-cog"></i>
+                    System Settings
+                </h2>
+                
+                <div class="form-container">
+                    <h3 class="form-title">System Configuration</h3>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="risk-threshold-high">High Risk Threshold</label>
+                            <input type="range" id="risk-threshold-high" min="0" max="100" value="75">
+                            <div class="d-flex justify-between">
+                                <span>0</span>
+                                <span id="high-threshold-value">75</span>
+                                <span>100</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="risk-threshold-medium">Medium Risk Threshold</label>
+                            <input type="range" id="risk-threshold-medium" min="0" max="100" value="40">
+                            <div class="d-flex justify-between">
+                                <span>0</span>
+                                <span id="medium-threshold-value">40</span>
+                                <span>100</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="auto-flag">Auto-flag Transactions</label>
+                            <select id="auto-flag">
+                                <option value="enabled">Enabled</option>
+                                <option value="disabled">Disabled</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="simulation-speed">Simulation Speed</label>
+                            <select id="simulation-speed">
+                                <option value="1">1x (Normal)</option>
+                                <option value="5">5x (Fast)</option>
+                                <option value="10">10x (Very Fast)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="alert-sound">Alert Sound</label>
+                            <select id="alert-sound">
+                                <option value="enabled">Enabled</option>
+                                <option value="disabled">Disabled</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="data-retention">Data Retention (Days)</label>
+                            <input type="number" id="data-retention" min="1" max="365" value="90">
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button id="save-settings" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            Save Settings
+                        </button>
+                        <button id="delete-all-data" class="btn btn-danger">
+                            <i class="fas fa-trash"></i>
+                            Delete All Data
+                        </button>
+                        <button id="backup-data" class="btn btn-secondary">
+                            <i class="fas fa-database"></i>
+                            Backup Data
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <!-- Alert Panel -->
+        <div class="alert-panel hidden" id="alert-panel">
+            <div class="alert-header">
+                <div class="alert-title">
+                    <i class="fas fa-bell"></i>
+                    <span>Alerts</span>
+                    <span class="alert-badge" id="alert-count">0</span>
+                </div>
+                <button id="close-alert-panel">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="alert-body" id="alert-list">
+                <!-- Alerts will be populated here -->
+            </div>
+        </div>
+        
+        <!-- Add User Modal -->
+        <div class="modal" id="add-user-modal">
+            <div class="modal-content">
+                <button class="modal-close" id="close-user-modal">&times;</button>
+                <h2 class="page-title mb-2">Add New User</h2>
+                
+                <form id="add-user-form">
+                    <div class="form-group mb-2">
+                        <label for="new-user-id">User ID</label>
+                        <input type="text" id="new-user-id" placeholder="e.g., U001" required>
+                    </div>
+                    
+                    <div class="form-group mb-2">
+                        <label for="new-user-name">Full Name</label>
+                        <input type="text" id="new-user-name" placeholder="e.g., John Doe" required>
+                    </div>
+                    
+                    <div class="form-group mb-2">
+                        <label for="new-user-location">Baseline Location</label>
+                        <input type="text" id="new-user-location" placeholder="e.g., New York, NY" required>
+                    </div>
+                    
+                    <div class="form-group mb-2">
+                        <label for="new-user-avg">Average Transaction ($)</label>
+                        <input type="number" id="new-user-avg" min="0" step="0.01" placeholder="0.00" required>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="new-user-risk">Default Risk Level</label>
+                        <select id="new-user-risk" required>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i>
+                            Add User
+                        </button>
+                        <button type="button" id="cancel-add-user" class="btn btn-secondary">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sound for alerts -->
+    <audio id="alert-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // Main Application
+        class FraudDetectionSystem {
+            constructor() {
+                this.transactions = [];
+                this.users = [];
+                this.alerts = [];
+                this.settings = {
+                    riskThresholdHigh: 75,
+                    riskThresholdMedium: 40,
+                    autoFlag: 'enabled',
+                    simulationSpeed: 1,
+                    alertSound: 'enabled',
+                    dataRetention: 90,
+                    darkMode: false
+                };
+                
+                this.fraudDetector = new FraudDetector();
+                this.charts = {};
+                this.simulationInterval = null;
+                this.simulationSpeed = 1;
+                
+                this.init();
+            }
+            
+            init() {
+                this.loadData();
+                this.setupEventListeners();
+                this.updateTime();
+                this.renderDashboard();
+                this.renderUserDropdowns();
+                this.renderUsersTable();
+                this.renderRules();
+                this.renderCharts();
+                this.updateAlertBadge();
+                
+                // Set initial time field to now
+                document.getElementById('time').value = this.getCurrentDateTime();
+            }
+            
+            loadData() {
+                // Load data from localStorage or create demo data
+                const storedTransactions = localStorage.getItem('fraudTransactions');
+                const storedUsers = localStorage.getItem('fraudUsers');
+                const storedAlerts = localStorage.getItem('fraudAlerts');
+                const storedSettings = localStorage.getItem('fraudSettings');
+                
+                if (storedTransactions) {
+                    this.transactions = JSON.parse(storedTransactions);
+                } else {
+                    this.transactions = this.generateDemoTransactions(20);
+                    this.saveTransactions();
+                }
+                
+                if (storedUsers) {
+                    this.users = JSON.parse(storedUsers);
+                } else {
+                    this.users = this.generateDemoUsers(5);
+                    this.saveUsers();
+                }
+                
+                if (storedAlerts) {
+                    this.alerts = JSON.parse(storedAlerts);
+                } else {
+                    this.alerts = this.generateDemoAlerts(3);
+                    this.saveAlerts();
+                }
+                
+                if (storedSettings) {
+                    this.settings = JSON.parse(storedSettings);
+                    // Apply dark mode if enabled
+                    if (this.settings.darkMode) {
+                        document.body.classList.add('dark-mode');
+                        document.getElementById('dark-mode-toggle').checked = true;
+                    }
+                    
+                    // Update UI elements with loaded settings
+                    document.getElementById('risk-threshold-high').value = this.settings.riskThresholdHigh;
+                    document.getElementById('risk-threshold-medium').value = this.settings.riskThresholdMedium;
+                    document.getElementById('high-threshold-value').textContent = this.settings.riskThresholdHigh;
+                    document.getElementById('medium-threshold-value').textContent = this.settings.riskThresholdMedium;
+                    document.getElementById('auto-flag').value = this.settings.autoFlag;
+                    document.getElementById('simulation-speed').value = this.settings.simulationSpeed;
+                    document.getElementById('alert-sound').value = this.settings.alertSound;
+                    document.getElementById('data-retention').value = this.settings.dataRetention;
+                    
+                    this.simulationSpeed = this.settings.simulationSpeed;
+                }
+            }
+            
+            saveTransactions() {
+                localStorage.setItem('fraudTransactions', JSON.stringify(this.transactions));
+            }
+            
+            saveUsers() {
+                localStorage.setItem('fraudUsers', JSON.stringify(this.users));
+            }
+            
+            saveAlerts() {
+                localStorage.setItem('fraudAlerts', JSON.stringify(this.alerts));
+            }
+            
+            saveSettings() {
+                localStorage.setItem('fraudSettings', JSON.stringify(this.settings));
+            }
+            
+            generateDemoTransactions(count) {
+                const transactions = [];
+                const locations = ['New York, NY', 'Los Angeles, CA', 'Chicago, IL', 'Miami, FL', 'Houston, TX', 'London, UK', 'Tokyo, Japan', 'Sydney, Australia'];
+                const merchants = ['Retail', 'Online', 'Travel', 'Electronics', 'Grocery', 'Restaurant', 'Other'];
+                const statuses = ['approved', 'flagged', 'blocked'];
+                
+                // Get today's date
+                const today = new Date();
+                
+                for (let i = 0; i < count; i++) {
+                    // Create a random date within the last 30 days
+                    const randomDaysAgo = Math.floor(Math.random() * 30);
+                    const transactionDate = new Date(today);
+                    transactionDate.setDate(today.getDate() - randomDaysAgo);
+                    
+                    // Random time
+                    const randomHour = Math.floor(Math.random() * 24);
+                    const randomMinute = Math.floor(Math.random() * 60);
+                    transactionDate.setHours(randomHour, randomMinute, 0);
+                    
+                    const user = this.users[Math.floor(Math.random() * this.users.length)] || this.users[0];
+                    const amount = parseFloat((Math.random() * 5000).toFixed(2));
+                    const location = locations[Math.floor(Math.random() * locations.length)];
+                    const merchant = merchants[Math.floor(Math.random() * merchants.length)];
+                    
+                    // Calculate risk score
+                    const riskScore = this.fraudDetector.calculateRisk({
+                        userId: user.id,
+                        amount,
+                        location,
+                        merchant,
+                        timestamp: transactionDate.toISOString(),
+                        user
+                    });
+                    
+                    // Determine status based on risk score
+                    let status;
+                    if (riskScore >= this.settings.riskThresholdHigh) status = 'blocked';
+                    else if (riskScore >= this.settings.riskThresholdMedium) status = 'flagged';
+                    else status = 'approved';
+                    
+                    // Randomly change some statuses for variety
+                    if (Math.random() < 0.1 && status !== 'blocked') {
+                        status = statuses[Math.floor(Math.random() * statuses.length)];
+                    }
+                    
+                    transactions.push({
+                        id: `TX${1000 + i}`,
+                        userId: user.id,
+                        amount,
+                        location,
+                        timestamp: transactionDate.toISOString(),
+                        merchant,
+                        riskScore,
+                        status,
+                        reasons: this.getRiskReasons(riskScore, amount, location, user)
+                    });
+                }
+                
+                // Sort by timestamp (newest first)
+                return transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            }
+            
+            generateDemoUsers(count) {
+                const users = [];
+                const names = ['John Smith', 'Emma Johnson', 'Michael Brown', 'Sarah Davis', 'Robert Wilson', 'Lisa Miller', 'David Moore', 'Jennifer Taylor', 'William Anderson', 'Maria Thomas'];
+                const locations = ['New York, NY', 'Los Angeles, CA', 'Chicago, IL', 'Miami, FL', 'Houston, TX', 'Phoenix, AZ', 'Philadelphia, PA', 'San Antonio, TX', 'San Diego, CA', 'Dallas, TX'];
+                const riskLevels = ['low', 'medium', 'high'];
+                
+                for (let i = 0; i < count; i++) {
+                    const riskLevel = riskLevels[Math.floor(Math.random() * riskLevels.length)];
+                    
+                    users.push({
+                        id: `U${100 + i}`,
+                        name: names[i % names.length],
+                        baselineLocation: locations[i % locations.length],
+                        avgTransaction: parseFloat((Math.random() * 1000 + 100).toFixed(2)),
+                        riskLevel,
+                        status: 'active',
+                        whitelisted: Math.random() < 0.1,
+                        blacklisted: Math.random() < 0.05,
+                        transactionCount: Math.floor(Math.random() * 50) + 5
+                    });
+                }
+                
+                return users;
+            }
+            
+            generateDemoAlerts(count) {
+                const alerts = [];
+                const types = ['high', 'medium', 'low'];
+                const messages = [
+                    'Unusual transaction pattern detected',
+                    'Multiple failed login attempts detected',
+                    'Transaction amount exceeds user\'s typical spending',
+                    'Geographic anomaly detected: Transaction from unusual location',
+                    'Velocity check failed: Too many transactions in short period',
+                    'Transaction matches known fraud pattern',
+                    'User account accessed from suspicious IP address',
+                    'Merchant category mismatch with user profile'
+                ];
+                
+                const today = new Date();
+                
+                for (let i = 0; i < count; i++) {
+                    const randomHoursAgo = Math.floor(Math.random() * 72);
+                    const alertDate = new Date(today);
+                    alertDate.setHours(today.getHours() - randomHoursAgo);
+                    
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    
+                    alerts.push({
+                        id: `AL${1000 + i}`,
+                        timestamp: alertDate.toISOString(),
+                        type,
+                        message: messages[Math.floor(Math.random() * messages.length)],
+                        read: Math.random() < 0.7,
+                        transactionId: `TX${1000 + Math.floor(Math.random() * 50)}`
+                    });
+                }
+                
+                // Sort by timestamp (newest first)
+                return alerts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            }
+            
+            getRiskReasons(riskScore, amount, location, user) {
+                const reasons = [];
+                
+                if (amount > 5000) reasons.push('Very high amount');
+                else if (amount > 2000) reasons.push('High amount');
+                
+                if (user && location !== user.baselineLocation) reasons.push('Location mismatch');
+                
+                if (riskScore > 80) reasons.push('Multiple risk factors detected');
+                else if (riskScore > 60) reasons.push('Suspicious pattern');
+                
+                if (reasons.length === 0) reasons.push('Normal transaction');
+                
+                return reasons;
+            }
+            
+            setupEventListeners() {
+                // Navigation
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const pageId = item.getAttribute('data-page');
+                        this.switchPage(pageId);
+                        
+                        // Update active nav item
+                        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                        item.classList.add('active');
+                    });
+                });
+                
+                // Dark mode toggle
+                document.getElementById('dark-mode-toggle').addEventListener('change', (e) => {
+                    this.toggleDarkMode(e.target.checked);
+                });
+                
+                // Transaction form
+                document.getElementById('transaction-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.processTransaction();
+                });
+                
+                document.getElementById('clear-form').addEventListener('click', () => {
+                    this.clearTransactionForm();
+                });
+                
+                document.getElementById('preview-risk').addEventListener('click', () => {
+                    this.previewRiskScore();
+                });
+                
+                // Load demo data
+                document.getElementById('load-demo-btn').addEventListener('click', () => {
+                    this.loadDemoData();
+                });
+                
+                // Delete all data
+                document.getElementById('delete-all-data').addEventListener('click', () => {
+                    this.deleteAllData();
+                });
+                
+                // Simulation controls
+                document.getElementById('simulate-btn').addEventListener('click', () => {
+                    this.toggleSimulation();
+                });
+                
+                document.getElementById('auto-generate').addEventListener('click', () => {
+                    this.generateRandomTransaction();
+                });
+                
+                // Export data
+                document.getElementById('export-data').addEventListener('click', () => {
+                    this.exportData();
+                });
+                
+                // Add user modal
+                document.getElementById('add-user-btn').addEventListener('click', () => {
+                    this.showAddUserModal();
+                });
+                
+                document.getElementById('close-user-modal').addEventListener('click', () => {
+                    this.hideAddUserModal();
+                });
+                
+                document.getElementById('cancel-add-user').addEventListener('click', () => {
+                    this.hideAddUserModal();
+                });
+                
+                document.getElementById('add-user-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.addNewUser();
+                });
+                
+                // Settings
+                document.getElementById('risk-threshold-high').addEventListener('input', (e) => {
+                    document.getElementById('high-threshold-value').textContent = e.target.value;
+                });
+                
+                document.getElementById('risk-threshold-medium').addEventListener('input', (e) => {
+                    document.getElementById('medium-threshold-value').textContent = e.target.value;
+                });
+                
+                document.getElementById('save-settings').addEventListener('click', () => {
+                    this.saveSystemSettings();
+                });
+                
+                document.getElementById('backup-data').addEventListener('click', () => {
+                    this.backupData();
+                });
+                
+                // Alert panel
+                document.getElementById('close-alert-panel').addEventListener('click', () => {
+                    document.getElementById('alert-panel').classList.add('hidden');
+                });
+                
+                // Mark all alerts as read
+                document.getElementById('mark-all-read').addEventListener('click', () => {
+                    this.markAllAlertsAsRead();
+                });
+                
+                // Clear all alerts
+                document.getElementById('clear-alerts').addEventListener('click', () => {
+                    if (confirm('Are you sure you want to clear all alerts?')) {
+                        this.clearAllAlerts();
+                    }
+                });
+                
+                // Filter alerts
+                document.getElementById('alert-filter').addEventListener('change', (e) => {
+                    this.renderAlertsPage(e.target.value);
+                });
+                
+                // Filter transactions
+                document.getElementById('filter-status').addEventListener('change', () => {
+                    this.renderTransactionsPage();
+                });
+                
+                document.getElementById('filter-risk').addEventListener('change', () => {
+                    this.renderTransactionsPage();
+                });
+                
+                document.getElementById('search-transactions').addEventListener('input', () => {
+                    this.renderTransactionsPage();
+                });
+                
+                document.getElementById('clear-filters').addEventListener('click', () => {
+                    document.getElementById('filter-status').value = 'all';
+                    document.getElementById('filter-risk').value = 'all';
+                    document.getElementById('search-transactions').value = '';
+                    this.renderTransactionsPage();
+                });
+                
+                // Apply list action
+                document.getElementById('apply-list-action').addEventListener('click', () => {
+                    this.applyListAction();
+                });
+                
+                // Generate report
+                document.getElementById('generate-report').addEventListener('click', () => {
+                    this.generateReport();
+                });
+                
+                // Export report
+                document.getElementById('export-report').addEventListener('click', () => {
+                    this.exportReport();
+                });
+            }
+            
+            switchPage(pageId) {
+                // Hide all pages
+                document.querySelectorAll('.page').forEach(page => {
+                    page.classList.remove('active');
+                });
+                
+                // Show selected page
+                document.getElementById(pageId).classList.add('active');
+                
+                // Update charts if on analytics page
+                if (pageId === 'analytics') {
+                    setTimeout(() => {
+                        this.renderCharts();
+                    }, 100);
+                }
+                
+                // Render transactions page if needed
+                if (pageId === 'transactions') {
+                    this.renderTransactionsPage();
+                }
+                
+                // Render alerts page if needed
+                if (pageId === 'alerts') {
+                    this.renderAlertsPage('all');
+                }
+            }
+            
+            toggleDarkMode(enabled) {
+                if (enabled) {
+                    document.body.classList.add('dark-mode');
+                    this.settings.darkMode = true;
+                } else {
+                    document.body.classList.remove('dark-mode');
+                    this.settings.darkMode = false;
+                }
+                this.saveSettings();
+            }
+            
+            updateTime() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('en-US', { 
+                    hour12: true, 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                const dateString = now.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                
+                document.getElementById('current-time').textContent = `${dateString} | ${timeString}`;
+                
+                // Update every second
+                setTimeout(() => this.updateTime(), 1000);
+            }
+            
+            getCurrentDateTime() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+            
+            renderDashboard() {
+                // Update summary cards
+                const today = new Date().toISOString().split('T')[0];
+                const todayTransactions = this.transactions.filter(t => t.timestamp.startsWith(today));
+                
+                document.getElementById('total-transactions').textContent = todayTransactions.length;
+                document.getElementById('high-risk').textContent = todayTransactions.filter(t => t.riskScore >= this.settings.riskThresholdHigh).length;
+                document.getElementById('flagged').textContent = todayTransactions.filter(t => t.status === 'flagged').length;
+                
+                // Calculate accuracy (simulated - higher when fewer high-risk transactions)
+                const totalTransactions = this.transactions.length;
+                const blockedTransactions = this.transactions.filter(t => t.status === 'blocked').length;
+                const accuracy = totalTransactions > 0 ? Math.max(85, Math.min(99, 95 - (blockedTransactions / totalTransactions * 10))) : 95;
+                document.getElementById('accuracy').textContent = `${Math.round(accuracy)}%`;
+                
+                // Render transaction feed (last 10 transactions)
+                const feedContainer = document.getElementById('transaction-feed');
+                feedContainer.innerHTML = '';
+                
+                const recentTransactions = this.transactions.slice(0, 10);
+                recentTransactions.forEach(transaction => {
+                    const row = this.createTransactionRow(transaction);
+                    feedContainer.appendChild(row);
+                });
+            }
+            
+            renderUserDropdowns() {
+                const userIdSelect = document.getElementById('user-id');
+                const userSelect = document.getElementById('user-select');
+                
+                // Clear existing options except first
+                while (userIdSelect.options.length > 1) {
+                    userIdSelect.remove(1);
+                }
+                
+                while (userSelect.options.length > 1) {
+                    userSelect.remove(1);
+                }
+                
+                // Add user options
+                this.users.forEach(user => {
+                    const option1 = document.createElement('option');
+                    option1.value = user.id;
+                    option1.textContent = `${user.id} - ${user.name}`;
+                    userIdSelect.appendChild(option1);
+                    
+                    const option2 = document.createElement('option');
+                    option2.value = user.id;
+                    option2.textContent = `${user.id} - ${user.name}`;
+                    userSelect.appendChild(option2);
+                });
+            }
+            
+            renderUsersTable() {
+                const container = document.getElementById('users-list');
+                container.innerHTML = '';
+                
+                this.users.forEach(user => {
+                    const row = document.createElement('tr');
+                    
+                    // Determine status badge
+                    let statusBadge;
+                    if (user.blacklisted) {
+                        statusBadge = '<span class="status-badge status-blocked">Blacklisted</span>';
+                    } else if (user.whitelisted) {
+                        statusBadge = '<span class="status-badge status-approved">Whitelisted</span>';
+                    } else {
+                        statusBadge = '<span class="status-badge status-approved">Active</span>';
+                    }
+                    
+                    // Determine risk badge
+                    let riskBadge;
+                    if (user.riskLevel === 'high') {
+                        riskBadge = '<span class="risk-badge risk-high">High</span>';
+                    } else if (user.riskLevel === 'medium') {
+                        riskBadge = '<span class="risk-badge risk-medium">Medium</span>';
+                    } else {
+                        riskBadge = '<span class="risk-badge risk-low">Low</span>';
+                    }
+                    
+                    row.innerHTML = `
+                        <td>${user.id}</td>
+                        <td>${user.name}</td>
+                        <td>${user.baselineLocation}</td>
+                        <td>$${user.avgTransaction.toFixed(2)}</td>
+                        <td>${riskBadge}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn btn-secondary" onclick="fraudSystem.viewUserHistory('${user.id}')">
+                                <i class="fas fa-history"></i>
+                            </button>
+                            <button class="btn btn-danger" onclick="fraudSystem.deleteUser('${user.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    
+                    container.appendChild(row);
+                });
+            }
+            
+            renderRules() {
+                const container = document.getElementById('rules-list');
+                container.innerHTML = '';
+                
+                const rules = this.fraudDetector.rules;
+                
+                rules.forEach(rule => {
+                    const ruleElement = document.createElement('div');
+                    ruleElement.className = 'card mb-2';
+                    ruleElement.innerHTML = `
+                        <div class="d-flex justify-between align-center">
+                            <div>
+                                <h4 class="mb-1">${rule.name}</h4>
+                                <p class="mb-1">${rule.description}</p>
+                                <small>Weight: ${rule.weight} | Triggered today: ${Math.floor(Math.random() * 10)}</small>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <span class="risk-badge ${rule.enabled ? 'risk-low' : 'risk-medium'}">
+                                    ${rule.enabled ? 'Enabled' : 'Disabled'}
+                                </span>
+                                <button class="btn btn-secondary" onclick="fraudSystem.toggleRule('${rule.name}')">
+                                    <i class="fas fa-${rule.enabled ? 'toggle-on' : 'toggle-off'}"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(ruleElement);
+                });
+                
+                // Update rules triggered today
+                document.getElementById('rules-triggered').textContent = Math.floor(Math.random() * 50);
+                document.getElementById('false-positives').textContent = Math.floor(Math.random() * 10);
+                document.getElementById('avg-processing').textContent = `${Math.floor(Math.random() * 50) + 20}ms`;
+            }
+            
+            renderCharts() {
+                // Destroy existing charts
+                Object.values(this.charts).forEach(chart => {
+                    if (chart) chart.destroy();
+                });
+                
+                // Risk Distribution Pie Chart
+                const riskCtx = document.getElementById('risk-distribution-chart').getContext('2d');
+                const lowRisk = this.transactions.filter(t => t.riskScore < this.settings.riskThresholdMedium).length;
+                const mediumRisk = this.transactions.filter(t => t.riskScore >= this.settings.riskThresholdMedium && t.riskScore < this.settings.riskThresholdHigh).length;
+                const highRisk = this.transactions.filter(t => t.riskScore >= this.settings.riskThresholdHigh).length;
+                
+                this.charts.riskDistribution = new Chart(riskCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+                        datasets: [{
+                            data: [lowRisk, mediumRisk, highRisk],
+                            backgroundColor: [
+                                'rgba(76, 175, 80, 0.7)',
+                                'rgba(255, 152, 0, 0.7)',
+                                'rgba(244, 67, 54, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(76, 175, 80, 1)',
+                                'rgba(255, 152, 0, 1)',
+                                'rgba(244, 67, 54, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+                
+                // Transactions Over Time Line Chart
+                const timeCtx = document.getElementById('transactions-time-chart').getContext('2d');
+                
+                // Group transactions by date
+                const transactionsByDate = {};
+                this.transactions.forEach(t => {
+                    const date = t.timestamp.split('T')[0];
+                    if (!transactionsByDate[date]) {
+                        transactionsByDate[date] = { total: 0, highRisk: 0 };
+                    }
+                    transactionsByDate[date].total++;
+                    if (t.riskScore >= this.settings.riskThresholdHigh) transactionsByDate[date].highRisk++;
+                });
+                
+                const dates = Object.keys(transactionsByDate).slice(-10); // Last 10 days
+                const totals = dates.map(date => transactionsByDate[date].total);
+                const highRisks = dates.map(date => transactionsByDate[date].highRisk);
+                
+                this.charts.transactionsTime = new Chart(timeCtx, {
+                    type: 'line',
+                    data: {
+                        labels: dates,
+                        datasets: [
+                            {
+                                label: 'Total Transactions',
+                                data: totals,
+                                borderColor: 'rgba(41, 98, 255, 0.8)',
+                                backgroundColor: 'rgba(41, 98, 255, 0.1)',
+                                tension: 0.3,
+                                fill: true
+                            },
+                            {
+                                label: 'High Risk Transactions',
+                                data: highRisks,
+                                borderColor: 'rgba(244, 67, 54, 0.8)',
+                                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                tension: 0.3,
+                                fill: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+                
+                // Top Flagged Users Bar Chart
+                const flaggedCtx = document.getElementById('flagged-users-chart').getContext('2d');
+                
+                // Count flagged transactions per user
+                const userFlagCounts = {};
+                this.transactions.forEach(t => {
+                    if (t.status === 'flagged' || t.status === 'blocked') {
+                        userFlagCounts[t.userId] = (userFlagCounts[t.userId] || 0) + 1;
+                    }
+                });
+                
+                // Get top 5 users
+                const topUsers = Object.entries(userFlagCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+                
+                const userLabels = topUsers.map(([userId]) => userId);
+                const userData = topUsers.map(([, count]) => count);
+                
+                this.charts.flaggedUsers = new Chart(flaggedCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: userLabels,
+                        datasets: [{
+                            label: 'Flagged Transactions',
+                            data: userData,
+                            backgroundColor: 'rgba(255, 152, 0, 0.7)',
+                            borderColor: 'rgba(255, 152, 0, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+                
+                // Transaction Amounts by Status
+                const amountsCtx = document.getElementById('amounts-status-chart').getContext('2d');
+                
+                const approvedAmount = this.transactions
+                    .filter(t => t.status === 'approved')
+                    .reduce((sum, t) => sum + t.amount, 0);
+                
+                const flaggedAmount = this.transactions
+                    .filter(t => t.status === 'flagged')
+                    .reduce((sum, t) => sum + t.amount, 0);
+                
+                const blockedAmount = this.transactions
+                    .filter(t => t.status === 'blocked')
+                    .reduce((sum, t) => sum + t.amount, 0);
+                
+                this.charts.amountsStatus = new Chart(amountsCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Approved', 'Flagged', 'Blocked'],
+                        datasets: [{
+                            data: [approvedAmount, flaggedAmount, blockedAmount],
+                            backgroundColor: [
+                                'rgba(76, 175, 80, 0.7)',
+                                'rgba(255, 152, 0, 0.7)',
+                                'rgba(244, 67, 54, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(76, 175, 80, 1)',
+                                'rgba(255, 152, 0, 1)',
+                                'rgba(244, 67, 54, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+            
+            renderTransactionsPage() {
+                const container = document.getElementById('all-transactions');
+                container.innerHTML = '';
+                
+                const statusFilter = document.getElementById('filter-status').value;
+                const riskFilter = document.getElementById('filter-risk').value;
+                const searchQuery = document.getElementById('search-transactions').value.toLowerCase();
+                
+                // Filter transactions
+                let filteredTransactions = this.transactions;
+                
+                if (statusFilter !== 'all') {
+                    filteredTransactions = filteredTransactions.filter(t => t.status === statusFilter);
+                }
+                
+                if (riskFilter !== 'all') {
+                    filteredTransactions = filteredTransactions.filter(t => {
+                        if (riskFilter === 'low') return t.riskScore < this.settings.riskThresholdMedium;
+                        if (riskFilter === 'medium') return t.riskScore >= this.settings.riskThresholdMedium && t.riskScore < this.settings.riskThresholdHigh;
+                        if (riskFilter === 'high') return t.riskScore >= this.settings.riskThresholdHigh;
+                        return true;
+                    });
+                }
+                
+                if (searchQuery) {
+                    filteredTransactions = filteredTransactions.filter(t => 
+                        t.id.toLowerCase().includes(searchQuery) ||
+                        t.userId.toLowerCase().includes(searchQuery) ||
+                        t.location.toLowerCase().includes(searchQuery) ||
+                        t.merchant.toLowerCase().includes(searchQuery)
+                    );
+                }
+                
+                // Render transactions
+                filteredTransactions.forEach(transaction => {
+                    const row = this.createTransactionRow(transaction, true);
+                    container.appendChild(row);
+                });
+            }
+            
+            renderAlertsPage(filter) {
+                const container = document.getElementById('alerts-container');
+                container.innerHTML = '';
+                
+                // Filter alerts
+                let filteredAlerts = this.alerts;
+                
+                if (filter === 'unread') {
+                    filteredAlerts = filteredAlerts.filter(a => !a.read);
+                } else if (filter !== 'all') {
+                    filteredAlerts = filteredAlerts.filter(a => a.type === filter);
+                }
+                
+                if (filteredAlerts.length === 0) {
+                    container.innerHTML = '<div class="p-3 text-center">No alerts found</div>';
+                    return;
+                }
+                
+                // Render alerts
+                filteredAlerts.forEach(alert => {
+                    const alertElement = document.createElement('div');
+                    alertElement.className = `alert-item ${alert.read ? '' : 'unread'}`;
+                    alertElement.innerHTML = `
+                        <div class="alert-item-header">
+                            <span class="risk-badge risk-${alert.type}">${alert.type.toUpperCase()}</span>
+                            <span class="alert-time">${new Date(alert.timestamp).toLocaleString()}</span>
+                        </div>
+                        <div class="alert-message">${alert.message}</div>
+                        ${alert.transactionId ? `<small>Transaction ID: ${alert.transactionId}</small>` : ''}
+                    `;
+                    
+                    // Mark as read when clicked
+                    alertElement.addEventListener('click', () => {
+                        if (!alert.read) {
+                            alert.read = true;
+                            this.saveAlerts();
+                            this.updateAlertBadge();
+                            alertElement.classList.remove('unread');
+                        }
+                    });
+                    
+                    container.appendChild(alertElement);
+                });
+            }
+            
+            createTransactionRow(transaction, showId = false) {
+                const row = document.createElement('tr');
+                row.className = 'new-transaction';
+                
+                // Determine risk badge
+                let riskBadge;
+                if (transaction.riskScore >= this.settings.riskThresholdHigh) {
+                    riskBadge = '<span class="risk-badge risk-high">High</span>';
+                } else if (transaction.riskScore >= this.settings.riskThresholdMedium) {
+                    riskBadge = '<span class="risk-badge risk-medium">Medium</span>';
+                } else {
+                    riskBadge = '<span class="risk-badge risk-low">Low</span>';
+                }
+                
+                // Determine status badge
+                let statusBadge;
+                if (transaction.status === 'approved') {
+                    statusBadge = '<span class="status-badge status-approved">Approved</span>';
+                } else if (transaction.status === 'flagged') {
+                    statusBadge = '<span class="status-badge status-flagged">Flagged</span>';
+                } else {
+                    statusBadge = '<span class="status-badge status-blocked">Blocked</span>';
+                }
+                
+                // Format time
+                const time = new Date(transaction.timestamp);
+                const timeString = time.toLocaleTimeString('en-US', { 
+                    hour12: true, 
+                    hour: '2-digit', 
+                    minute: '2-digit'
+                });
+                
+                // Create row HTML
+                row.innerHTML = `
+                    ${showId ? `<td>${transaction.id}</td>` : ''}
+                    <td>${timeString}</td>
+                    <td>${transaction.userId}</td>
+                    <td>$${transaction.amount.toFixed(2)}</td>
+                    <td>${transaction.location}</td>
+                    ${showId ? `<td>${transaction.merchant}</td>` : ''}
+                    <td>
+                        <div class="d-flex align-center gap-1">
+                            ${riskBadge}
+                            <span>${transaction.riskScore}</span>
+                        </div>
+                    </td>
+                    <td>${statusBadge}</td>
+                    ${showId ? `
+                    <td>
+                        <button class="btn btn-secondary" onclick="fraudSystem.viewTransactionDetails('${transaction.id}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-danger" onclick="fraudSystem.deleteTransaction('${transaction.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                    ` : ''}
+                `;
+                
+                return row;
+            }
+            
+            processTransaction() {
+                const userId = document.getElementById('user-id').value;
+                const amount = parseFloat(document.getElementById('amount').value);
+                const location = document.getElementById('location').value;
+                const merchant = document.getElementById('merchant-type').value;
+                const time = document.getElementById('time').value;
+                
+                // Form validation
+                if (!userId || !amount || !location || !merchant || !time) {
+                    this.showNotification('Please fill in all required fields', 'warning');
+                    return;
+                }
+                
+                if (amount <= 0) {
+                    this.showNotification('Amount must be greater than 0', 'warning');
+                    return;
+                }
+                
+                // Find user
+                const user = this.users.find(u => u.id === userId);
+                if (!user) {
+                    this.showNotification('User not found!', 'warning');
+                    return;
+                }
+                
+                // Calculate risk score
+                const riskScore = this.fraudDetector.calculateRisk({
+                    userId,
+                    amount,
+                    location,
+                    merchant,
+                    timestamp: new Date(time).toISOString(),
+                    user
+                });
+                
+                // Determine status
+                let status;
+                if (riskScore >= this.settings.riskThresholdHigh) {
+                    status = 'blocked';
+                } else if (riskScore >= this.settings.riskThresholdMedium) {
+                    status = 'flagged';
+                } else {
+                    status = 'approved';
+                }
+                
+                // Override status if user is whitelisted or blacklisted
+                if (user.blacklisted) {
+                    status = 'blocked';
+                    riskScore = 100; // Maximum risk for blacklisted users
+                } else if (user.whitelisted) {
+                    status = 'approved';
+                    riskScore = Math.min(riskScore, 20); // Cap risk for whitelisted users
+                }
+                
+                // Create transaction
+                const transaction = {
+                    id: `TX${1000 + this.transactions.length}`,
+                    userId,
+                    amount,
+                    location,
+                    timestamp: new Date(time).toISOString(),
+                    merchant,
+                    riskScore,
+                    status,
+                    reasons: this.getRiskReasons(riskScore, amount, location, user)
+                };
+                
+                // Add to transactions (at the beginning)
+                this.transactions.unshift(transaction);
+                this.saveTransactions();
+                
+                // Add alert if high risk
+                if (riskScore >= this.settings.riskThresholdHigh) {
+                    this.addAlert('high', `High-risk transaction detected: ${transaction.id} (Risk: ${riskScore})`, transaction.id);
+                } else if (riskScore >= this.settings.riskThresholdMedium) {
+                    this.addAlert('medium', `Suspicious transaction detected: ${transaction.id} (Risk: ${riskScore})`, transaction.id);
+                }
+                
+                // Update UI
+                this.renderDashboard();
+                this.renderTransactionsPage();
+                this.renderCharts();
+                this.clearTransactionForm();
+                
+                // Show success message
+                this.showNotification(`Transaction ${transaction.id} processed. Status: ${status}`, status === 'approved' ? 'success' : 'warning');
+            }
+            
+            previewRiskScore() {
+                const userId = document.getElementById('user-id').value;
+                const amount = parseFloat(document.getElementById('amount').value) || 0;
+                const location = document.getElementById('location').value;
+                const merchant = document.getElementById('merchant-type').value;
+                const time = document.getElementById('time').value;
+                
+                if (!userId || !location || !merchant || !time) {
+                    this.showNotification('Please fill in all fields to calculate risk score', 'warning');
+                    return;
+                }
+                
+                if (amount <= 0) {
+                    this.showNotification('Amount must be greater than 0', 'warning');
+                    return;
+                }
+                
+                // Find user
+                const user = this.users.find(u => u.id === userId);
+                if (!user) {
+                    this.showNotification('User not found!', 'warning');
+                    return;
+                }
+                
+                // Calculate risk score
+                const riskScore = this.fraudDetector.calculateRisk({
+                    userId,
+                    amount,
+                    location,
+                    merchant,
+                    timestamp: new Date(time).toISOString(),
+                    user
+                });
+                
+                // Update preview badge
+                const previewElement = document.getElementById('risk-preview');
+                previewElement.textContent = riskScore;
+                
+                // Update badge class based on risk
+                previewElement.className = 'risk-badge';
+                if (riskScore >= this.settings.riskThresholdHigh) {
+                    previewElement.classList.add('risk-high');
+                } else if (riskScore >= this.settings.riskThresholdMedium) {
+                    previewElement.classList.add('risk-medium');
+                } else {
+                    previewElement.classList.add('risk-low');
+                }
+                
+                // Add shake animation
+                previewElement.classList.add('shake');
+                setTimeout(() => {
+                    previewElement.classList.remove('shake');
+                }, 500);
+            }
+            
+            clearTransactionForm() {
+                document.getElementById('transaction-form').reset();
+                document.getElementById('time').value = this.getCurrentDateTime();
+                
+                // Reset risk preview
+                const previewElement = document.getElementById('risk-preview');
+                previewElement.textContent = '0';
+                previewElement.className = 'risk-badge risk-low';
+            }
+            
+            loadDemoData() {
+                if (confirm('Load demo data? This will replace your current data with comprehensive demo data.')) {
+                    // Generate comprehensive demo data
+                    this.users = this.generateDemoUsers(15);
+                    this.transactions = this.generateDemoTransactions(100);
+                    this.alerts = this.generateDemoAlerts(20);
+                    
+                    // Save to localStorage
+                    this.saveUsers();
+                    this.saveTransactions();
+                    this.saveAlerts();
+                    
+                    // Update UI
+                    this.renderUserDropdowns();
+                    this.renderUsersTable();
+                    this.renderDashboard();
+                    this.renderTransactionsPage();
+                    this.renderAlertsPage('all');
+                    this.renderCharts();
+                    this.updateAlertBadge();
+                    
+                    this.showNotification('Demo data loaded successfully!', 'success');
+                }
+            }
+            
+            deleteAllData() {
+                if (confirm('Are you sure you want to delete ALL data? This action cannot be undone.')) {
+                    // Clear all data
+                    this.transactions = [];
+                    this.users = [];
+                    this.alerts = [];
+                    
+                    // Save empty data to localStorage
+                    this.saveTransactions();
+                    this.saveUsers();
+                    this.saveAlerts();
+                    
+                    // Update UI
+                    this.renderUserDropdowns();
+                    this.renderUsersTable();
+                    this.renderDashboard();
+                    this.renderTransactionsPage();
+                    this.renderAlertsPage('all');
+                    this.renderCharts();
+                    this.updateAlertBadge();
+                    
+                    this.showNotification('All data deleted successfully', 'success');
+                }
+            }
+            
+            generateRandomTransaction() {
+                // Pick a random user
+                if (this.users.length === 0) {
+                    this.showNotification('No users available. Please add users first.', 'warning');
+                    return;
+                }
+                
+                const user = this.users[Math.floor(Math.random() * this.users.length)];
+                
+                // Generate random data
+                const locations = ['New York, NY', 'Los Angeles, CA', 'Chicago, IL', 'Miami, FL', 'Houston, TX', 'London, UK', 'Tokyo, Japan', 'Sydney, Australia'];
+                const merchants = ['Retail', 'Online', 'Travel', 'Electronics', 'Grocery', 'Restaurant', 'Other'];
+                
+                const amount = parseFloat((Math.random() * 5000).toFixed(2));
+                const location = locations[Math.floor(Math.random() * locations.length)];
+                const merchant = merchants[Math.floor(Math.random() * merchants.length)];
+                
+                // Set form values
+                document.getElementById('user-id').value = user.id;
+                document.getElementById('amount').value = amount;
+                document.getElementById('location').value = location;
+                document.getElementById('merchant-type').value = merchant;
+                document.getElementById('time').value = this.getCurrentDateTime();
+                
+                // Calculate risk
+                this.previewRiskScore();
+            }
+            
+            toggleSimulation() {
+                const btn = document.getElementById('simulate-btn');
+                
+                if (this.simulationInterval) {
+                    clearInterval(this.simulationInterval);
+                    this.simulationInterval = null;
+                    btn.innerHTML = '<i class="fas fa-bolt"></i><span>Start Simulation</span>';
+                    btn.classList.remove('btn-danger');
+                    btn.classList.add('btn-primary');
+                } else {
+                    this.startSimulation();
+                    btn.innerHTML = '<i class="fas fa-pause"></i><span>Stop Simulation</span>';
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-danger');
+                }
+            }
+            
+            startSimulation() {
+                if (this.simulationInterval) {
+                    clearInterval(this.simulationInterval);
+                }
+                
+                // Adjust interval based on speed
+                const interval = 5000 / this.simulationSpeed; // 5 seconds divided by speed
+                
+                this.simulationInterval = setInterval(() => {
+                    // Ensure we have users
+                    if (this.users.length === 0) {
+                        this.showNotification('No users available for simulation', 'warning');
+                        this.toggleSimulation();
+                        return;
+                    }
+                    
+                    this.generateRandomTransaction();
+                    
+                    // Process transaction automatically 50% of the time
+                    if (Math.random() < 0.5) {
+                        setTimeout(() => {
+                            this.processTransaction();
+                        }, 500);
+                    }
+                }, interval);
+            }
+            
+            addAlert(type, message, transactionId = null) {
+                const alert = {
+                    id: `AL${1000 + this.alerts.length}`,
+                    timestamp: new Date().toISOString(),
+                    type,
+                    message,
+                    read: false,
+                    transactionId
+                };
+                
+                this.alerts.unshift(alert);
+                this.saveAlerts();
+                
+                // Update alert badge
+                this.updateAlertBadge();
+                
+                // Show alert panel
+                this.showAlertPanel(alert);
+                
+                // Play sound if enabled
+                if (this.settings.alertSound === 'enabled' && type === 'high') {
+                    document.getElementById('alert-sound').play().catch(e => console.log('Audio play failed:', e));
+                }
+            }
+            
+            updateAlertBadge() {
+                const unreadCount = this.alerts.filter(a => !a.read).length;
+                const badge = document.querySelector('.alert-badge');
+                
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+            
+            showAlertPanel(alert) {
+                const panel = document.getElementById('alert-panel');
+                const alertList = document.getElementById('alert-list');
+                
+                // Create alert element
+                const alertElement = document.createElement('div');
+                alertElement.className = 'alert-item unread';
+                alertElement.innerHTML = `
+                    <div class="alert-item-header">
+                        <span class="risk-badge risk-${alert.type}">${alert.type.toUpperCase()}</span>
+                        <span class="alert-time">${new Date(alert.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="alert-message">${alert.message}</div>
+                `;
+                
+                // Mark as read when clicked
+                alertElement.addEventListener('click', () => {
+                    alert.read = true;
+                    this.saveAlerts();
+                    this.updateAlertBadge();
+                    alertElement.classList.remove('unread');
+                });
+                
+                // Add to top of list
+                alertList.insertBefore(alertElement, alertList.firstChild);
+                
+                // Update count
+                document.getElementById('alert-count').textContent = this.alerts.filter(a => !a.read).length;
+                
+                // Show panel
+                panel.classList.remove('hidden');
+                
+                // Auto-hide after 10 seconds
+                setTimeout(() => {
+                    if (panel && !panel.matches(':hover')) {
+                        panel.classList.add('hidden');
+                    }
+                }, 10000);
+            }
+            
+            markAllAlertsAsRead() {
+                this.alerts.forEach(alert => {
+                    alert.read = true;
+                });
+                
+                this.saveAlerts();
+                this.updateAlertBadge();
+                this.renderAlertsPage(document.getElementById('alert-filter').value);
+                
+                this.showNotification('All alerts marked as read', 'success');
+            }
+            
+            clearAllAlerts() {
+                this.alerts = [];
+                this.saveAlerts();
+                this.updateAlertBadge();
+                this.renderAlertsPage('all');
+                
+                this.showNotification('All alerts cleared', 'success');
+            }
+            
+            showAddUserModal() {
+                document.getElementById('add-user-modal').classList.add('active');
+            }
+            
+            hideAddUserModal() {
+                document.getElementById('add-user-modal').classList.remove('active');
+                document.getElementById('add-user-form').reset();
+            }
+            
+            addNewUser() {
+                const id = document.getElementById('new-user-id').value;
+                const name = document.getElementById('new-user-name').value;
+                const location = document.getElementById('new-user-location').value;
+                const avgTransaction = parseFloat(document.getElementById('new-user-avg').value);
+                const riskLevel = document.getElementById('new-user-risk').value;
+                
+                // Form validation
+                if (!id || !name || !location || !avgTransaction || !riskLevel) {
+                    this.showNotification('Please fill in all required fields', 'warning');
+                    return;
+                }
+                
+                if (avgTransaction <= 0) {
+                    this.showNotification('Average transaction must be greater than 0', 'warning');
+                    return;
+                }
+                
+                // Check if user ID already exists
+                if (this.users.some(u => u.id === id)) {
+                    this.showNotification('User ID already exists!', 'warning');
+                    return;
+                }
+                
+                // Create new user
+                const newUser = {
+                    id,
+                    name,
+                    baselineLocation: location,
+                    avgTransaction,
+                    riskLevel,
+                    status: 'active',
+                    whitelisted: false,
+                    blacklisted: false,
+                    transactionCount: 0
+                };
+                
+                this.users.push(newUser);
+                this.saveUsers();
+                
+                // Update UI
+                this.renderUserDropdowns();
+                this.renderUsersTable();
+                this.hideAddUserModal();
+                
+                // Show success message
+                this.showNotification(`User ${id} added successfully`, 'success');
+            }
+            
+            deleteUser(userId) {
+                if (confirm(`Are you sure you want to delete user ${userId}?`)) {
+                    // Don't allow deletion if user has transactions
+                    const userTransactions = this.transactions.filter(t => t.userId === userId);
+                    if (userTransactions.length > 0) {
+                        this.showNotification(`Cannot delete user ${userId} because they have ${userTransactions.length} transactions.`, 'warning');
+                        return;
+                    }
+                    
+                    this.users = this.users.filter(u => u.id !== userId);
+                    this.saveUsers();
+                    this.renderUserDropdowns();
+                    this.renderUsersTable();
+                    
+                    this.showNotification(`User ${userId} deleted`, 'success');
+                }
+            }
+            
+            deleteTransaction(transactionId) {
+                if (confirm(`Are you sure you want to delete transaction ${transactionId}?`)) {
+                    this.transactions = this.transactions.filter(t => t.id !== transactionId);
+                    this.saveTransactions();
+                    
+                    // Update UI
+                    this.renderDashboard();
+                    this.renderTransactionsPage();
+                    this.renderCharts();
+                    
+                    this.showNotification(`Transaction ${transactionId} deleted`, 'success');
+                }
+            }
+            
+            viewUserHistory(userId) {
+                const userTransactions = this.transactions.filter(t => t.userId === userId);
+                const user = this.users.find(u => u.id === userId);
+                
+                let message = `Transaction History for ${userId} (${user?.name || 'Unknown User'})\n\n`;
+                message += `Total Transactions: ${userTransactions.length}\n`;
+                
+                if (userTransactions.length > 0) {
+                    message += '\nRecent Transactions:\n';
+                    userTransactions.slice(0, 5).forEach(t => {
+                        message += `- ${t.id}: $${t.amount} (${t.status}, Risk: ${t.riskScore})\n`;
+                    });
+                    
+                    if (userTransactions.length > 5) {
+                        message += `... and ${userTransactions.length - 5} more\n`;
+                    }
+                } else {
+                    message += 'No transactions found for this user.';
+                }
+                
+                alert(message);
+            }
+            
+            viewTransactionDetails(transactionId) {
+                const transaction = this.transactions.find(t => t.id === transactionId);
+                if (transaction) {
+                    alert(`Transaction Details:
+ID: ${transaction.id}
+User: ${transaction.userId}
+Amount: $${transaction.amount}
+Location: ${transaction.location}
+Time: ${new Date(transaction.timestamp).toLocaleString()}
+Merchant: ${transaction.merchant}
+Risk Score: ${transaction.riskScore}
+Status: ${transaction.status}
+Reasons: ${transaction.reasons.join(', ')}`);
+                }
+            }
+            
+            applyListAction() {
+                const userId = document.getElementById('user-select').value;
+                const action = document.getElementById('list-action').value;
+                const reason = document.getElementById('list-reason').value;
+                
+                if (!userId) {
+                    this.showNotification('Please select a user', 'warning');
+                    return;
+                }
+                
+                const user = this.users.find(u => u.id === userId);
+                if (!user) {
+                    this.showNotification('User not found', 'warning');
+                    return;
+                }
+                
+                // Apply action
+                if (action === 'whitelist') {
+                    user.whitelisted = true;
+                    user.blacklisted = false;
+                    this.addAlert('low', `User ${userId} added to whitelist: ${reason || 'No reason provided'}`);
+                    this.showNotification(`User ${userId} added to whitelist`, 'success');
+                } else if (action === 'blacklist') {
+                    user.blacklisted = true;
+                    user.whitelisted = false;
+                    this.addAlert('high', `User ${userId} added to blacklist: ${reason || 'No reason provided'}`);
+                    this.showNotification(`User ${userId} added to blacklist`, 'warning');
+                } else if (action === 'remove') {
+                    user.whitelisted = false;
+                    user.blacklisted = false;
+                    this.addAlert('low', `User ${userId} removed from lists: ${reason || 'No reason provided'}`);
+                    this.showNotification(`User ${userId} removed from lists`, 'success');
+                }
+                
+                this.saveUsers();
+                this.renderUsersTable();
+                
+                // Clear form
+                document.getElementById('list-reason').value = '';
+            }
+            
+            saveSystemSettings() {
+                // Get values from form
+                this.settings.riskThresholdHigh = parseInt(document.getElementById('risk-threshold-high').value);
+                this.settings.riskThresholdMedium = parseInt(document.getElementById('risk-threshold-medium').value);
+                this.settings.autoFlag = document.getElementById('auto-flag').value;
+                this.settings.simulationSpeed = parseInt(document.getElementById('simulation-speed').value);
+                this.settings.alertSound = document.getElementById('alert-sound').value;
+                this.settings.dataRetention = parseInt(document.getElementById('data-retention').value);
+                
+                // Update simulation speed if changed
+                if (this.simulationSpeed !== this.settings.simulationSpeed) {
+                    this.simulationSpeed = this.settings.simulationSpeed;
+                    if (this.simulationInterval) {
+                        this.startSimulation();
+                    }
+                }
+                
+                this.saveSettings();
+                
+                this.showNotification('Settings saved successfully', 'success');
+            }
+            
+            backupData() {
+                const backup = {
+                    transactions: this.transactions,
+                    users: this.users,
+                    alerts: this.alerts,
+                    settings: this.settings,
+                    backupDate: new Date().toISOString()
+                };
+                
+                const dataStr = JSON.stringify(backup, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = `fraudwatch-backup-${new Date().toISOString().slice(0,10)}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+                
+                this.showNotification('Backup created successfully', 'success');
+            }
+            
+            exportData() {
+                const dataStr = JSON.stringify(this.transactions, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = `transactions-export-${new Date().toISOString().slice(0,10)}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+                
+                this.showNotification('Data exported successfully', 'success');
+            }
+            
+            generateReport() {
+                const reportType = document.getElementById('report-type').value;
+                const dateFrom = document.getElementById('date-from').value;
+                const dateTo = document.getElementById('date-to').value;
+                
+                // Filter transactions based on date range
+                let filteredTransactions = this.transactions;
+                
+                if (dateFrom) {
+                    filteredTransactions = filteredTransactions.filter(t => 
+                        new Date(t.timestamp) >= new Date(dateFrom)
+                    );
+                }
+                
+                if (dateTo) {
+                    filteredTransactions = filteredTransactions.filter(t => 
+                        new Date(t.timestamp) <= new Date(dateTo + 'T23:59:59')
+                    );
+                }
+                
+                // Generate report summary
+                const totalTransactions = filteredTransactions.length;
+                const approvedTransactions = filteredTransactions.filter(t => t.status === 'approved').length;
+                const flaggedTransactions = filteredTransactions.filter(t => t.status === 'flagged').length;
+                const blockedTransactions = filteredTransactions.filter(t => t.status === 'blocked').length;
+                const totalAmount = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
+                const avgRiskScore = totalTransactions > 0 ? 
+                    filteredTransactions.reduce((sum, t) => sum + t.riskScore, 0) / totalTransactions : 0;
+                
+                const report = {
+                    title: `${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Fraud Detection Report`,
+                    generatedDate: new Date().toISOString(),
+                    period: {
+                        from: dateFrom || 'Beginning',
+                        to: dateTo || 'Now'
+                    },
+                    summary: {
+                        totalTransactions,
+                        approvedTransactions,
+                        flaggedTransactions,
+                        blockedTransactions,
+                        totalAmount: parseFloat(totalAmount.toFixed(2)),
+                        averageRiskScore: parseFloat(avgRiskScore.toFixed(2)),
+                        highRiskRate: totalTransactions > 0 ? 
+                            (filteredTransactions.filter(t => t.riskScore >= this.settings.riskThresholdHigh).length / totalTransactions * 100).toFixed(2) + '%' : '0%'
+                    },
+                    topFlaggedUsers: this.getTopFlaggedUsers(filteredTransactions, 5),
+                    recommendations: this.generateRecommendations(filteredTransactions)
+                };
+                
+                // Show report in alert (in a real app, this would open a detailed report modal)
+                let reportMessage = `${report.title}\n`;
+                reportMessage += `Generated: ${new Date(report.generatedDate).toLocaleString()}\n`;
+                reportMessage += `Period: ${report.period.from} to ${report.period.to}\n\n`;
+                reportMessage += `Summary:\n`;
+                reportMessage += `- Total Transactions: ${report.summary.totalTransactions}\n`;
+                reportMessage += `- Approved: ${report.summary.approvedTransactions}\n`;
+                reportMessage += `- Flagged: ${report.summary.flaggedTransactions}\n`;
+                reportMessage += `- Blocked: ${report.summary.blockedTransactions}\n`;
+                reportMessage += `- Total Amount: $${report.summary.totalAmount}\n`;
+                reportMessage += `- Average Risk Score: ${report.summary.averageRiskScore}\n`;
+                reportMessage += `- High Risk Rate: ${report.summary.highRiskRate}\n`;
+                
+                alert(reportMessage);
+                
+                this.showNotification(`${reportType} report generated`, 'success');
+            }
+            
+            getTopFlaggedUsers(transactions, limit) {
+                const userFlagCounts = {};
+                transactions.forEach(t => {
+                    if (t.status === 'flagged' || t.status === 'blocked') {
+                        userFlagCounts[t.userId] = (userFlagCounts[t.userId] || 0) + 1;
+                    }
+                });
+                
+                return Object.entries(userFlagCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, limit)
+                    .map(([userId, count]) => ({ userId, count }));
+            }
+            
+            generateRecommendations(transactions) {
+                const recommendations = [];
+                
+                // Check for high false positive rate
+                const flaggedTransactions = transactions.filter(t => t.status === 'flagged');
+                const totalTransactions = transactions.length;
+                
+                if (flaggedTransactions.length > 0 && totalTransactions > 0) {
+                    const falsePositiveRate = flaggedTransactions.length / totalTransactions;
+                    if (falsePositiveRate > 0.3) {
+                        recommendations.push("Consider adjusting risk thresholds to reduce false positives");
+                    }
+                }
+                
+                // Check for geographic anomalies
+                const locationMismatches = transactions.filter(t => {
+                    const user = this.users.find(u => u.id === t.userId);
+                    return user && t.location !== user.baselineLocation;
+                }).length;
+                
+                if (locationMismatches > 0) {
+                    recommendations.push(`${locationMismatches} location mismatches detected. Consider updating user baseline locations.`);
+                }
+                
+                // Check for time anomalies
+                const lateNightTransactions = transactions.filter(t => {
+                    const hour = new Date(t.timestamp).getHours();
+                    return hour < 6 || hour > 22;
+                }).length;
+                
+                if (lateNightTransactions > 0) {
+                    recommendations.push(`${lateNightTransactions} transactions occurred during unusual hours.`);
+                }
+                
+                return recommendations.length > 0 ? recommendations : ["No significant issues detected. System is performing well."];
+            }
+            
+            exportReport() {
+                // Generate a simple text report for export
+                const reportType = document.getElementById('report-type').value;
+                const dateFrom = document.getElementById('date-from').value;
+                const dateTo = document.getElementById('date-to').value;
+                
+                let filteredTransactions = this.transactions;
+                
+                if (dateFrom) {
+                    filteredTransactions = filteredTransactions.filter(t => 
+                        new Date(t.timestamp) >= new Date(dateFrom)
+                    );
+                }
+                
+                if (dateTo) {
+                    filteredTransactions = filteredTransactions.filter(t => 
+                        new Date(t.timestamp) <= new Date(dateTo + 'T23:59:59')
+                    );
+                }
+                
+                const totalTransactions = filteredTransactions.length;
+                const approvedTransactions = filteredTransactions.filter(t => t.status === 'approved').length;
+                const flaggedTransactions = filteredTransactions.filter(t => t.status === 'flagged').length;
+                const blockedTransactions = filteredTransactions.filter(t => t.status === 'blocked').length;
+                const totalAmount = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
+                
+                let reportText = `Fraud Detection Report - ${reportType}\n`;
+                reportText += `Generated: ${new Date().toLocaleString()}\n`;
+                reportText += `Period: ${dateFrom || 'Beginning'} to ${dateTo || 'Now'}\n`;
+                reportText += '='.repeat(50) + '\n\n';
+                
+                reportText += 'SUMMARY\n';
+                reportText += `Total Transactions: ${totalTransactions}\n`;
+                reportText += `Approved Transactions: ${approvedTransactions}\n`;
+                reportText += `Flagged Transactions: ${flaggedTransactions}\n`;
+                reportText += `Blocked Transactions: ${blockedTransactions}\n`;
+                reportText += `Total Amount: $${totalAmount.toFixed(2)}\n\n`;
+                
+                reportText += 'TRANSACTION DETAILS\n';
+                filteredTransactions.slice(0, 50).forEach(t => {
+                    reportText += `${t.id} | ${t.userId} | $${t.amount.toFixed(2)} | ${t.status} | Risk: ${t.riskScore}\n`;
+                });
+                
+                if (filteredTransactions.length > 50) {
+                    reportText += `... and ${filteredTransactions.length - 50} more transactions\n`;
+                }
+                
+                const dataStr = 'data:text/plain;charset=utf-8,' + encodeURIComponent(reportText);
+                const exportFileDefaultName = `fraud-report-${new Date().toISOString().slice(0,10)}.txt`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataStr);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+                
+                this.showNotification('Report exported successfully', 'success');
+            }
+            
+            toggleRule(ruleName) {
+                const rule = this.fraudDetector.rules.find(r => r.name === ruleName);
+                if (rule) {
+                    rule.enabled = !rule.enabled;
+                    this.renderRules();
+                    this.showNotification(`${ruleName} ${rule.enabled ? 'enabled' : 'disabled'}`, 'success');
+                }
+            }
+            
+            showNotification(message, type = 'info') {
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                notification.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background-color: ${type === 'success' ? 'var(--success)' : type === 'warning' ? 'var(--warning)' : type === 'danger' ? 'var(--danger)' : 'var(--info)'};
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    border-radius: var(--border-radius);
+                    box-shadow: var(--shadow);
+                    z-index: 1000;
+                    animation: slideIn 0.3s ease;
+                    max-width: 400px;
+                `;
+                
+                document.body.appendChild(notification);
+                
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            document.body.removeChild(notification);
+                        }
+                    }, 300);
+                }, 3000);
+                
+                // Add CSS for animations if not already present
+                if (!document.getElementById('notification-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'notification-styles';
+                    style.textContent = `
+                        @keyframes slideIn {
+                            from { transform: translateX(100%); opacity: 0; }
+                            to { transform: translateX(0); opacity: 1; }
+                        }
+                        @keyframes slideOut {
+                            from { transform: translateX(0); opacity: 1; }
+                            to { transform: translateX(100%); opacity: 0; }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+            }
+        }
+
+        // Fraud Detection Engine
+        class FraudDetector {
+            constructor() {
+                this.rules = [
+                    {
+                        name: "Amount Threshold",
+                        description: "Flag transactions exceeding $10,000",
+                        check: (transaction) => transaction.amount > 10000,
+                        weight: 30,
+                        enabled: true
+                    },
+                    {
+                        name: "Location Mismatch",
+                        description: "Flag transactions from unusual locations",
+                        check: (transaction) => transaction.location !== transaction.user.baselineLocation,
+                        weight: 25,
+                        enabled: true
+                    },
+                    {
+                        name: "Time Anomaly",
+                        description: "Flag transactions during unusual hours (10 PM - 6 AM)",
+                        check: (transaction) => {
+                            const hour = new Date(transaction.timestamp).getHours();
+                            return hour < 6 || hour > 22;
+                        },
+                        weight: 20,
+                        enabled: true
+                    },
+                    {
+                        name: "Velocity Check",
+                        description: "Flag users with >5 transactions in last hour",
+                        check: (transaction, userTransactions) => {
+                            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+                            const recentTransactions = userTransactions.filter(t => 
+                                new Date(t.timestamp) > oneHourAgo
+                            );
+                            return recentTransactions.length > 5;
+                        },
+                        weight: 25,
+                        enabled: true
+                    },
+                    {
+                        name: "Merchant Risk",
+                        description: "Flag transactions at high-risk merchant categories",
+                        check: (transaction) => {
+                            const highRiskMerchants = ['Online Gambling', 'Cryptocurrency', 'Adult Services'];
+                            return highRiskMerchants.includes(transaction.merchant);
+                        },
+                        weight: 15,
+                        enabled: true
+                    },
+                    {
+                        name: "Amount Deviation",
+                        description: "Flag transactions significantly different from user average",
+                        check: (transaction) => {
+                            const avg = transaction.user.avgTransaction;
+                            return transaction.amount > avg * 3;
+                        },
+                        weight: 20,
+                        enabled: true
+                    }
+                ];
+            }
+            
+            calculateRisk(transaction) {
+                let riskScore = 0;
+                
+                // Get user's recent transactions
+                const userTransactions = fraudSystem.transactions.filter(t => 
+                    t.userId === transaction.userId && 
+                    t.id !== transaction.id
+                );
+                
+                // Apply each rule
+                this.rules.forEach(rule => {
+                    if (rule.enabled && rule.check(transaction, userTransactions)) {
+                        riskScore += rule.weight;
+                    }
+                });
+                
+                // Adjust based on user risk level
+                if (transaction.user.riskLevel === 'high') {
+                    riskScore += 20;
+                } else if (transaction.user.riskLevel === 'medium') {
+                    riskScore += 10;
+                }
+                
+                // Adjust based on user status
+                if (transaction.user.blacklisted) {
+                    riskScore += 50;
+                } else if (transaction.user.whitelisted) {
+                    riskScore = Math.max(0, riskScore - 30);
+                }
+                
+                // Add some randomness (simulating ML uncertainty)
+                riskScore += Math.random() * 10 - 5;
+                
+                // Cap at 0-100
+                return Math.max(0, Math.min(100, Math.round(riskScore)));
+            }
+        }
+
+        // Initialize the application when the page loads
+        let fraudSystem;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            fraudSystem = new FraudDetectionSystem();
+            
+            // Make fraudSystem globally available for onclick handlers
+            window.fraudSystem = fraudSystem;
+            
+            // Initialize service worker for PWA
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').catch(error => {
+                    console.log('ServiceWorker registration failed:', error);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
